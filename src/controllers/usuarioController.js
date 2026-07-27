@@ -12,8 +12,9 @@ export const buscarUsuarioPorId = async (req,res) => {
     try {
         const usuario = await usuarioModel.findByPk(req.params.id)
         if (!usuario) {
-            return res.status(404).json({ message: "Usuário não encontrado0!" })
+            return res.status(404).json({ message: "Usuário não encontrado!" })
         }
+        res.status(200).json(usuario)
     } catch (error) {
         res.status(500).json(error)
     }
@@ -21,7 +22,7 @@ export const buscarUsuarioPorId = async (req,res) => {
 export const cadastrarUsuario = async (req,res) => {
     try {
         const usuario = await usuarioModel.create(req.body)
-        res.status(200).json(usuario)
+        res.status(201).json(usuario)
     } catch (error) {
         res.status(500).json(error)
     }
@@ -30,7 +31,7 @@ export const atualizarUsuario = async (req,res) => {
     try {
         const usuario = await usuarioModel.findByPk(req.params.id)
         if (!usuario) {
-            return res.status(404).json({ message: "Usuário não encontrado0!" })
+            return res.status(404).json({ message: "Usuário não encontrado!" })
         }
         await usuario.update(req.body)
         res.status(200).json(usuario)
@@ -42,7 +43,7 @@ export const excluirUsuario = async (req,res) => {
     try {
         const usuario = await usuarioModel.findByPk(req.params.id)
         if (!usuario) {
-            return res.status(404).json({ message: "Usuário não encontrado0!" })
+            return res.status(404).json({ message: "Usuário não encontrado!" })
         }
         await usuario.destroy()
         res.status(204).send()
