@@ -1,9 +1,12 @@
+import "./models/index.js";
 import app from "./app.js";
+import { conn } from "./config/conn.js";
 
 const PORT = 3333
 
 const iniciarServidor = async () => {
     try {
+        await conn.sync()
         app.listen(PORT, () => {
             console.log(`Server running on: http://localhost:${PORT}`)
         })
