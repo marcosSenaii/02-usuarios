@@ -1,11 +1,12 @@
 import { usuarioModel } from "../models/index.js";
+import { tratarErro } from "../utils/errorHandle.js";
 
 export const listarUsuarios = async (req,res) => {
     try {
         const usuarios = await usuarioModel.findAll()
         res.status(200).json(usuarios)
     } catch (error) {
-        res.status(500).json(error)
+        return await tratarErro(error, res)
     }
 }
 export const buscarUsuarioPorId = async (req,res) => {
@@ -16,7 +17,7 @@ export const buscarUsuarioPorId = async (req,res) => {
         }
         res.status(200).json(usuario)
     } catch (error) {
-        res.status(500).json(error)
+        return await tratarErro(error, res)
     }
 }
 export const cadastrarUsuario = async (req,res) => {
@@ -24,7 +25,7 @@ export const cadastrarUsuario = async (req,res) => {
         const usuario = await usuarioModel.create(req.body)
         res.status(201).json(usuario)
     } catch (error) {
-        res.status(500).json(error)
+        return await tratarErro(error, res)
     }
 }
 export const atualizarUsuario = async (req,res) => {
@@ -36,7 +37,7 @@ export const atualizarUsuario = async (req,res) => {
         await usuario.update(req.body)
         res.status(200).json(usuario)
     } catch (error) {
-        res.status(500).json(error)
+        return await tratarErro(error, res)
     }
 }
 export const excluirUsuario = async (req,res) => {
@@ -48,6 +49,6 @@ export const excluirUsuario = async (req,res) => {
         await usuario.destroy()
         res.status(204).send()
     } catch (error) {
-        res.status(500).json(error)
+        return await tratarErro(error, res)
     }
 }
