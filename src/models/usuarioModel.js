@@ -21,6 +21,19 @@ export const usuarioModel = conn.define("usuarios",
                 }
             }
         },
+        senha: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            validate: {
+                notEmpty: {
+                    msg: "A senha é obrigatória"
+                },
+                len: {
+                    args: [8, 100],
+                    msg: "A senha deve possuir entre 8 e 100 caracteres"
+                }
+            }
+        },
         email: {
             type: DataTypes.STRING,
             allowNull: false,
@@ -58,6 +71,19 @@ export const usuarioModel = conn.define("usuarios",
         }
     },
     {
-        timestamps: false
+        timestamps: false,
+
+        // Esconde a coluna senha
+        defaultScope: {
+            attributes: {
+                exclude: ["senha"]
+            }
+        },
+
+        scopes: {
+            comSenha: {
+                attributes: {}
+            }
+        }
     }
 )

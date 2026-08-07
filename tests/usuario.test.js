@@ -2,6 +2,7 @@ import { describe, test, expect, beforeAll } from "vitest";
 import { conn } from "../src/config/conn.js";
 import app from "../src/app.js";
 import request from "supertest";
+import { usuarioModel } from "../src/models/usuarioModel.js";
 
 // Antes de tudo (Before All)
 beforeAll(async () => {
@@ -22,9 +23,20 @@ const criarUsuario = async (dados = {}) => {
 // Suite de testes
 describe("GET /usuarios", () => {
     // Casos de teste
-    test ("Deve retornar o status 200", async () => {
+    test ("Deve retornar o status 200 e a lista de usuário com as propriedades corretas", async () => {
+        // ter dados > listar esses dados > comparar os dados listados com o do banco
+        await usuarioModel.destroy({ where: {}, truncate: true })
+        await criarUsuario({ nome: "Marcos", email: "marcos@email.com", idade: 18 })
+        await criarUsuario({ nome: "Ferreira", email: "ferreira@email.com", idade: 18 })
+
         const response = await request(app).get("/usuarios")
+        
         expect(response.status).toBe(200)
+        expect(response.ok).toBeTruthy()
+        expect(response.body).toHaveLength(2)
+
+        const emails = response.body.map((usuario) => usuario.email)
+        expect(emails).toContain("marcos@email.com")
     })
 })
 
@@ -142,57 +154,84 @@ describe("POST /usuarios", () => {
 describe("GET /usuarios/:id", () => {
     // Casos de teste
     test ("Deve retornar o status 200", async () => {
-        const response = await request(app).get("/usuarios/1")
+        const usuario = await criarUsuario()
+        
+        const response = await request(app).get(`/usuarios/${usuario.body.id}`)
         expect(response.status).toBe(200)
+        expect(response.ok).toBeTruthy()
+        expect(response.body).toEqual(usuario.body)
     })
 
     test ("Deve retornar o status 404 caso o ID do usuário não existe", async () => {
-        const response = await request(app).get("/usuarios/2")
+        const response = await request(app).get("/usuarios/999")
         expect(response.status).toBe(404)
+        expect(response.ok).toBeFalsy()
     })
 
     test ("Deve retornar 'Usuário não encontrado!' caso o ID do usuário não exista", async () => {
-        const response = await request(app).get("/usuarios/2")
+        const response = await request(app).get("/usuarios/777")
         expect(response.body.message).toBe("Usuário não encontrado!")
+        expect(response.ok).toBeFalsy()
     })
 })
 
 describe("PUT /usuarios/:id", () => {
     // Casos de teste
     test ("Deve retornar o status 200", async () => {
+        const usuario = await criarUsuario()
+        const dadosAtualizados = {
+            id: usuario.body.id,
+            nome: "Ferreira",
+            email: "ferreira123@email.com",
+            idade: 18
+        }
+
         const response = await request(app)
-        .put("/usuarios/1")
-        .send({
-            nome: "Ferreira"
-        })
+        .put(`/usuarios/${usuario.body.id}`)
+        .send(dadosAtualizados)
+
         expect(response.status).toBe(200)
+        expect(response.ok).toBeTruthy()
+        expect(response.body).toEqual(dadosAtualizados)
     })
 
     test ("Deve retornar o status 404 caso o ID do usuário não existe", async () => {
-        const response = await request(app).put("/usuarios/2")
+        const response = await request(app).put("/usuarios/999").send({
+            nome: "Ferreira",
+            email: "ferreira@email.com",
+            idade: 18
+        })
+
         expect(response.status).toBe(404)
+        expect(response.ok).toBeFalsy()
     })
 
     test ("Deve retornar 'Usuário não encontrado!' caso o ID do usuário não exista", async () => {
-        const response = await request(app).put("/usuarios/2")
+        const response = await request(app).put("/usuarios/999")
         expect(response.body.message).toBe("Usuário não encontrado!")
+        expect(response.ok).toBeFalsy()
     })
 })
 
 describe("DELETE /usuarios/:id", () => {
     // Casos de teste
     test ("Deve retornar o status 204", async () => {
-        const response = await request(app).delete("/usuarios/1")
+        const usuario = await criarUsuario()
+
+        const response = await request(app).delete(`/usuarios/${usuario.body.id}`)
         expect(response.status).toBe(204)
+        expect(response.ok).toBeTruthy()
     })
 
     test ("Deve retornar o status 404 caso o ID do usuário não existe", async () => {
-        const response = await request(app).delete("/usuarios/2")
+        const response = await request(app).delete("/usuarios/777")
         expect(response.status).toBe(404)
+        expect(response.ok).toBeFalsy()
     })
 
     test ("Deve retornar 'Usuário não encontrado!' caso o ID do usuário não exista", async () => {
-        const response = await request(app).delete("/usuarios/2")
+        const response = await request(app).delete("/usuarios/777")
         expect(response.body.message).toBe("Usuário não encontrado!")
+        expect(response.ok).toBeFalsy()
     })
 })

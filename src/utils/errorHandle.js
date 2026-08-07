@@ -13,6 +13,6 @@ export const tratarErro = (error, response) => {
             message: error.errors[0].message
         })
     }
-
+    console.log(error)
     return response.status(500).json({ message: "Erro interno do servidor" })
 }

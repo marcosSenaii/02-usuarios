@@ -6,13 +6,14 @@ const PORT = 3333
 
 const iniciarServidor = async () => {
     try {
-        await conn.sync()
+        //await conn.sync({ force: true })
+        await conn.sync();
         app.listen(PORT, () => {
-            console.log(`Server running on: http://localhost:${PORT}`)
-        })
+            console.log(`Server running on: http://localhost:${PORT}`);
+        });
     } catch (error) {
-        console.log("Erro ao iniciar servidor:", error.message)
+        console.log("Erro ao iniciar servidor:", error.message);
     }
 }
 
-await iniciarServidor()
+await iniciarServidor();
