@@ -58,6 +58,7 @@ export const cadastrarUsuario = async (req,res) => {
 }
 export const atualizarUsuario = async (req,res) => {
     const id = req.params.id
+    
     try {
         const token = await getToken(req)
         const usuarioToken = await getUserByToken(token)
