@@ -60,14 +60,15 @@ export const atualizarUsuario = async (req,res) => {
     const id = req.params.id
     
     try {
+        const usuarioToken = req.usuario
+
         const token = await getToken(req)
-        const usuarioToken = await getUserByToken(token)
 
         if(id != usuarioToken.id){
             return res.status(403).json({ message: "Não autorizado" })
         }
 
-        const usuario = await usuarioModel.findByPk(req.params.id)
+        const usuario = await usuarioModel.findByPk(id)
 
         if (!usuario) {
             return res.status(404).json({ message: "Usuário não encontrado!" })

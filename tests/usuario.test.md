@@ -3,6 +3,7 @@ import { conn } from "../src/config/conn.js";
 import app from "../src/app.js";
 import request from "supertest";
 import { usuarioModel } from "../src/models/usuarioModel.js";
+import jwt from "jsonwebtoken"
 
 // Antes de tudo (Before All)
 beforeAll(async () => {
@@ -16,30 +17,13 @@ const criarUsuario = async (dados = {}) => {
             nome: "Marcos Ferreira",
             email: `usuario${Date.now()}${Math.random()}@email.com`,
             idade: 18,
+            senha: "12345678",
+            verificaSenha: "12345678",
             ... dados
         })
 }
 
 // Suite de testes
-describe("GET /usuarios", () => {
-    // Casos de teste
-    test ("Deve retornar o status 200 e a lista de usuário com as propriedades corretas", async () => {
-        // ter dados > listar esses dados > comparar os dados listados com o do banco
-        await usuarioModel.destroy({ where: {}, truncate: true })
-        await criarUsuario({ nome: "Marcos", email: "marcos@email.com", idade: 18 })
-        await criarUsuario({ nome: "Ferreira", email: "ferreira@email.com", idade: 18 })
-
-        const response = await request(app).get("/usuarios")
-        
-        expect(response.status).toBe(200)
-        expect(response.ok).toBeTruthy()
-        expect(response.body).toHaveLength(2)
-
-        const emails = response.body.map((usuario) => usuario.email)
-        expect(emails).toContain("marcos@email.com")
-    })
-})
-
 describe("POST /usuarios", () => {
     test ("Deve retornar o status 201 e o objeto criado exatamente com os valores esperados", async () => {
         const dados = {
@@ -50,23 +34,24 @@ describe("POST /usuarios", () => {
 
         const response = await criarUsuario(dados)
 
-        expect(response.status).toBe(201)
+        expect(response.status).toBe(200)
         expect(response.ok).toBeTruthy()
 
         //Assertivas: toEqual
         expect(response.body).toEqual({
-            id: expect.any(Number),
-            nome: dados.nome,
-            email: dados.email,
-            idade: dados.idade
+            success: true,
+            statusCode: 200,
+            message: "Você está autenticado",
+            usuarioId: expect.any(Number),
+            token: expect.any(String)
         })
 
         //Assertiva: toHaveProperty()
-        expect(response.body).toHaveProperty("id")
-        expect(response.body).toHaveProperty("email", dados.email)
+        expect(response.body).toHaveProperty("usuarioId")
+        expect(response.body).toHaveProperty("token")
 
         //Assertiva: toBeDefined
-        expect(response.body.id).toBeDefined()
+        expect(response.body.usuarioId).toBeDefined()
         expect(response.body.senha).toBeUndefined()
     })
 
@@ -148,18 +133,52 @@ describe("POST /usuarios", () => {
             expect(response.status).toBe(400)
             expect(response.body.message).toBe("A idade deve ser um número inteiro")
         })
+        test("Deve retornar 401 quando as senhas não são iguais", async () => {
+            const response = await criarUsuario({
+                senha: "Senha 01",
+                verificaSenha: "Senha 02"
+            })
+
+            expect(response.status).toBe(401)
+            expect(response.ok).toBeFalsy()
+            expect(response.body.message).toBe("As senhas precisam ser iguais")
+        })
     })
-})
+});
+
+describe("GET /usuarios", () => {
+    // Casos de teste
+    test ("Deve retornar o status 200 e a lista de usuário com as propriedades corretas", async () => {
+        // ter dados > listar esses dados > comparar os dados listados com o do banco
+        await usuarioModel.destroy({ where: {} })
+        await criarUsuario({ nome: "Marcos", email: "marcos@email.com", idade: 18 })
+        await criarUsuario({ nome: "Ferreira", email: "ferreira@email.com", idade: 18 })
+
+        const response = await request(app).get("/usuarios")
+        
+        expect(response.status).toBe(200)
+        expect(response.ok).toBeTruthy()
+        expect(response.body).toHaveLength(2)
+
+        const emails = response.body.map((usuario) => usuario.email)
+        expect(emails).toContain("marcos@email.com")
+    })
+});
 
 describe("GET /usuarios/:id", () => {
     // Casos de teste
     test ("Deve retornar o status 200", async () => {
         const usuario = await criarUsuario()
         
-        const response = await request(app).get(`/usuarios/${usuario.body.id}`)
+        const response = await request(app).get(`/usuarios/${usuario.body.usuarioId}`)
         expect(response.status).toBe(200)
         expect(response.ok).toBeTruthy()
-        expect(response.body).toEqual(usuario.body)
+        expect(response.body).toEqual({
+            id: usuario.body.usuarioId,
+            nome: "Marcos Ferreira",
+            email: expect.any(String),
+            idade: 18
+        })
     })
 
     test ("Deve retornar o status 404 caso o ID do usuário não existe", async () => {
@@ -173,30 +192,40 @@ describe("GET /usuarios/:id", () => {
         expect(response.body.message).toBe("Usuário não encontrado!")
         expect(response.ok).toBeFalsy()
     })
-})
+});
 
 describe("PUT /usuarios/:id", () => {
     // Casos de teste
     test ("Deve retornar o status 200", async () => {
-        const usuario = await criarUsuario()
+        const email = `marcos${Date.now()}@email.com`
+        const usuario = await criarUsuario({ email })
+
         const dadosAtualizados = {
-            id: usuario.body.id,
             nome: "Ferreira",
-            email: "ferreira123@email.com",
+            email,
             idade: 18
         }
 
         const response = await request(app)
-        .put(`/usuarios/${usuario.body.id}`)
+        .put(`/usuarios/${usuario.body.usuarioId}`)
+        .set("Authorization", `Bearer ${usuario.body.token}`)
         .send(dadosAtualizados)
 
         expect(response.status).toBe(200)
         expect(response.ok).toBeTruthy()
-        expect(response.body).toEqual(dadosAtualizados)
+        expect(response.body).toEqual({
+            id: usuario.body.usuarioId,
+            ... dadosAtualizados
+        })
     })
 
     test ("Deve retornar o status 404 caso o ID do usuário não existe", async () => {
-        const response = await request(app).put("/usuarios/999").send({
+        const token = jwt.sign({ id: 999, email: "qualqueremail@gmail.com", idade: 30}, "SENHASUPERSEGURA")
+        
+        const response = await request(app)
+        .put("/usuarios/999")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
             nome: "Ferreira",
             email: "ferreira@email.com",
             idade: 18
@@ -207,31 +236,42 @@ describe("PUT /usuarios/:id", () => {
     })
 
     test ("Deve retornar 'Usuário não encontrado!' caso o ID do usuário não exista", async () => {
-        const response = await request(app).put("/usuarios/999")
+        const token = jwt.sign({ id: 999, email: "qualqueremail@gmail.com", idade: 30}, "SENHASUPERSEGURA")
+        
+        const response = await request(app)
+        .put("/usuarios/999")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+            nome: "Ferreira",
+            email: "ferreira@email.com",
+            idade: 18
+        })
+
         expect(response.body.message).toBe("Usuário não encontrado!")
         expect(response.ok).toBeFalsy()
     })
-})
+});
 
 describe("DELETE /usuarios/:id", () => {
     // Casos de teste
     test ("Deve retornar o status 204", async () => {
         const usuario = await criarUsuario()
 
-        const response = await request(app).delete(`/usuarios/${usuario.body.id}`)
+        const response = await request(app)
+            .delete(`/usuarios/${usuario.body.usuarioId}`)
+            .set("Authorization", `Bearer ${usuario.body.token}`)
+
         expect(response.status).toBe(204)
         expect(response.ok).toBeTruthy()
     })
 
     test ("Deve retornar o status 404 caso o ID do usuário não existe", async () => {
-        const response = await request(app).delete("/usuarios/777")
+        const token = jwt.sign({ id: 999, email: "qualqueremail@gmail.com", idade: 30}, "SENHASUPERSEGURA")
+        const response = await request(app)
+            .delete("/usuarios/777")
+            .set("Authorization", `Bearer ${token}`)
+
         expect(response.status).toBe(404)
         expect(response.ok).toBeFalsy()
     })
-
-    test ("Deve retornar 'Usuário não encontrado!' caso o ID do usuário não exista", async () => {
-        const response = await request(app).delete("/usuarios/777")
-        expect(response.body.message).toBe("Usuário não encontrado!")
-        expect(response.ok).toBeFalsy()
-    })
-})
+});

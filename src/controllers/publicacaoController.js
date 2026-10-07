@@ -44,7 +44,7 @@ export const listarPublicacoes = async (req, res) => {
             include: {
                 model: usuarioModel,
                 attributes: {
-                    exclude: ["id", "senha", "email"]
+                    exclude: ["id", "senha", "email", "idade"]
                 }
             },
             limit,
@@ -52,6 +52,10 @@ export const listarPublicacoes = async (req, res) => {
         })
 
         res.status(200).json({
+            info: {
+                page,
+                count
+            },
             results: rows
         })
     } catch (error) {

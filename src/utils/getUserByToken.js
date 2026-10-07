@@ -2,18 +2,15 @@ import jwt from "jsonwebtoken"
 import { usuarioModel } from "../models/index.js"
 
 export const getUserByToken = async (token) => {
-    return new Promise(async (resolve, reject) => {
-        if(!token){
-            return resolve.status(401).json({ message: "Acesso negado" })
-        }
+    if(!token){
+        throw new Error("Token não fornecido")
+    }
 
-        const decoded = jwt.verify(token, "SENHASUPERSEGURA")
-        const usuario = await usuarioModel.findByPk(decoded.id)
+    const decoded = jwt.verify(token, "SENHASUPERSEGURA")
+    const usuario = await usuarioModel.findByPk(decoded.id)
+    if(!usuario){
+        throw new Error("Usuário não encontrado")
+    }
 
-        if(!usuario){
-            reject({ error: "Error ao buscar usuário" })
-        }else{
-            resolve(usuario)
-        }
-    })
+    return usuario
 }
